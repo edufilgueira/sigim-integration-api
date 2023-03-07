@@ -10,4 +10,4 @@
 # app/* linguist-vendored
 
 *.kicad_pcb linguist-detectable=true
-*.sch linguist-detectable=true
+*.erb linguist-detectable=true
