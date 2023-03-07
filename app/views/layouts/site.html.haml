@@ -1,0 +1,19 @@
+!!! 5
+%html
+  %head
+    %meta{:name => "viewport", :content => "width=device-width, initial-scale=1.0"}
+    %title= content_for?(:title) ? yield(:title) : 'Sigim Integration Api'
+    %meta{:name => "description", :content => "#{content_for?(:description) ? yield(:description) : 'Sigim Integration Api'}"}
+    = stylesheet_link_tag 'application', media: 'all', 'data-turbolinks-track' => 'reload'
+    = javascript_include_tag 'application', 'data-turbolinks-track' => 'reload'
+    = csrf_meta_tags
+  %body
+    = render 'layouts/messages'
+    #wrapper
+      = render 'layouts/navigation'
+      #page-wrapper
+        .container-fluid
+          %h1.page-header
+            %strong
+              = yield(:title)
+          = yield

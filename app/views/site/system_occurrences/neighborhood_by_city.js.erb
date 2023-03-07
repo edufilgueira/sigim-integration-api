@@ -1,0 +1,2 @@
+<% option = options_from_collection_for_select(@neighborhoods, :id, :name) %>
+$('#<%= @cont %>.resources').empty().append("<%= j option %>");

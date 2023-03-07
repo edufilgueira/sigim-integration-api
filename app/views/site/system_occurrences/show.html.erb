@@ -1,0 +1,82 @@
+<%=render partial: 'site/system_occurrences/shared/form' %>
+
+<!-- Page Content -->
+	<div id="page-wrapper">
+		<div class="container-fluid">
+			<div class="row">
+				<div class="col-lg-12">
+					<h1 class="page-header"> <strong>
+							<%=@title%><strong></strong>
+						</strong></h1>
+					<div class="col-lg-12">
+						<div class="panel panel-default">
+							<!-- /.panel-heading -->
+							<div class="panel-body">
+								<div class="row">
+									<div class="col">
+										<div class="form-group">
+
+											<% @system_occurrence.import_error.each do | import_error | %>
+												<table width="100%" class="table table-striped table-bordered table-hover"
+													id="dataTables-example">
+													<thead>
+														<tr>
+															<th>Tipo</th>
+															<th>Recurso</th>
+															<th>Inconsistência</th>
+															<th>Ignorado por</th>
+															<th>Data</th>
+														
+														</tr>
+													</thead>
+													<tbody>
+														<tr class="odd gradeX">
+															<td>
+																<%= t("base.errors_type.#{import_error["error_type"]}")%>
+															</td>
+															<td>
+																<%= t("activerecord.models.#{import_error["classfy"]}")%>
+															</td>
+															<td>
+																<%=import_error["error"] %>
+															</td>
+															
+															<td>
+															<%=@system_occurrence.altered_for%>
+															</td>
+														<td>	
+															<%=@system_occurrence.updated_at%>
+														</td>
+														</tr>
+														<% end %>
+													</tbody>
+												</table>
+														<div class="well">
+													<% Integrations::SystemOccurrence.distinct_source_system_errors_type_create.each do | agruped | %>	
+													<%= link_to agruped_site_system_occurrences_path(source_system:
+                            agruped.source_system.to_i) do %>
+														<i class="fa fa-sort-asc"></i> VOLTAR
+
+														<% end %>
+														<% end %>
+													</div>
+									</div>
+								</div>
+							</div>
+							<!-- /.panel-body -->
+
+						</div>
+						<!-- /.panel -->
+					</div>
+					<!-- /.col-lg-12 -->
+				</div>
+			</div>
+			<!-- /.col-lg-12 -->
+		</div>
+		<!-- /.row -->
+	</div>
+	<!-- /.container-fluid -->
+	</div>
+	<!-- /#page-wrapper -->
+	</div>
+	<!-- /#wrapper -->

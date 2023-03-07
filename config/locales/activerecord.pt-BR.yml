@@ -1,0 +1,87 @@
+pt-BR:
+  activerecord:
+    models:
+      ability_action: Ação
+      ability_permission: Permissão
+      ability_profile: Perfil
+      ability_resource: Recurso
+      menu: Menu
+      user: Usuario
+      crime_type: Tipo de Crime
+      breed: Raça
+      state: Estado
+      city: Cidade
+      community: Comunidade
+      contact_type: Tipo de Contato
+      ethnicity: Etnia
+      sectorial: Setorial
+      neighborhood: Bairro
+      facility: Equipamento
+      neighborhood_community: Comunidade do Bairro
+      person: Pessoa
+      gender: Gênero
+      gender_identity: Identidade de Gênero
+      sexual_orientation: Orientação Sexual
+      skin_color: Cor de Pele
+      civil_status: Etado Civil
+      scholarity: Escolaridade
+      people_address: Endereço da Pessoa
+      violence_motivation: Motivação da Violência
+      protective_measure: Medida Protetiva
+      protective_measure_requested: Medida Protetiva requerida
+      protective_measure_type: Tipo de Medida Protetiva
+      violence_type: Tipo de Violencia
+      lawsuit: Processo Judicial
+      forwarding_protocol: Protocolo de Encaminhamento
+      accompaniment_type: Tipo de Acompanhamento
+      incident_report: Relatório de Incidente
+      people_contact: Contato da Pessoa
+      relationship: Relacionamentos
+      relationship_degree: Grau de Relacionamento
+      accompaniment_type_facility: Tipo de acompanhamento por equipamento
+      facility_type: Tipo de equipamento
+      source_system: Sistema de Origem dos Dados
+      risk_level: Nível de Risco
+      dashboard: Dashboard
+      denunciation: Denúncia
+      dependency_type: Tipo de Dependência
+      handicap_type: Tipo de Deficiência
+      handicap_person: Deficiência da Pessoa
+      denunciation_aggressor_dependency: Tipo de dependência do agressor por denúncia
+
+
+    errors:
+      invalid_foreign_key: "Não foi possível deletar o registro, pois existe(m) dado(s) relacionado(s) a ele"
+
+      models:
+        user:
+          attributes:
+            name:
+              blank: Não pode ser vazio
+            cpf:
+              taken: Já foi cadastrado
+              blank: Não pode ser vazio
+            email:
+              taken: Já foi cadastrado
+              blank: Não pode ser vazio
+            password:
+              blank: Não pode ser vazio
+        state:
+          attributes:
+            name:
+              blank: Não pode ser vazio
+        person:
+          attributes:
+            name:
+              blank: Não pode ser vazio
+            cpf:
+              taken: Já foi cadastrado
+            rg:
+              taken: Já foi cadastrado
+            voter_registration:
+              taken: Já foi cadastrado
+            work_card:
+              taken: Já foi cadastrado
+
+
+

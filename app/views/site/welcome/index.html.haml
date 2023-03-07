@@ -1,0 +1,21 @@
+- content_for :title, "Bem vindo ao sistema SIGIM - IMPORTAÇÕES"
+
+- Integrations::SystemOccurrence.distinct_source_system_errors_type_create.each do | distinct |
+  .col-lg-3.col-md-6
+    .panel.panel-primary
+      .panel-heading
+        .row
+          .col-xs-3
+            <i class="fa fa-tasks fa-5x"></i>
+          .col-xs-9.text-right
+            .huge
+              = distinct.count
+            %div
+              Ajustar inconsistências
+      = link_to agruped_site_system_occurrences_path(name: distinct.source_system, source_system: distinct.source_system.to_i) do
+        .panel-footer
+          %span.pull-left
+            = distinct.source_system
+          %span.pull-right
+            <i class="fa fa-arrow-circle-right"></i>
+          .clearfix

@@ -1,0 +1,48 @@
+- content_for :title, "Erros Gerais"
+
+%table.table.table-striped.table-bordered.table-hover
+	%thead
+		%tr
+			%th{style:"width:50px"}
+				Sistema
+			%th{style:"width:450px"}
+				Nome
+			%th
+				Tipo de erros
+	- @errors_imports.each do |error_import|
+
+		- array = []
+		- error_import.import_error.each do | err |
+			- array.push(err["error_type"])
+		
+		- all_association = true
+		- array.each do |item|
+			- all_association = false if item != "association"
+
+
+		- unless all_association
+			%tbody
+				%tr.odd.gradeX
+					%td
+						= error_import.source_system
+					%td
+						= error_import[:response]["nome"] if error_import.source_system == "oisol"
+						= error_import[:response]["nome"] if error_import.source_system == "nudem"
+					%td
+						- double=[]
+						- error_import.import_error.each do | error |
+							%span.label.label-danger
+								= t("base.errors_type.#{error["error_type"]}") if	!double.include?(error["error_type"])
+								&nbsp;
+							- double.push(error["error_type"])
+				%tr
+					%td{colspan:9}
+						%table.table
+							- error_import.import_error.each do | error |
+								- if error["error_type"] != "association"
+									%tr
+										%td
+											= t("base.errors_type.#{error["error_type"]}")
+											= t("activerecord.models.#{error["classfy"].underscore}")
+										%td
+											= error["error"]

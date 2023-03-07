@@ -1,0 +1,61 @@
+- content_for :title, "Associações inexistentes #{params[:name].upcase}"
+
+%table.table.table-striped.table-bordered.table-hover
+	%thead
+		%tr
+			%th
+				Recurso
+			%th{style:"width:200px"}
+				Inconsistência
+			%th{style:"width:50px"}
+				Qtd
+			%th
+				Associação
+			%th{style:"width:50px"}
+				Validar
+			%th{style:"width:50px"}
+				Ignorar
+			%th{style:"width:50px"}
+				Salvar
+		%tbody
+	- cont = 0
+	- @errors_type_associations.each do |etl_errors_import|
+		- cont += 1
+		- resource = etl_errors_import.resource
+
+		%tr.odd.gradeX{id: cont}
+			%td
+				= hidden_field_tag "resource", resource
+				= hidden_field_tag "classfy_id", etl_errors_import.classfy_id
+				= hidden_field_tag "ids", etl_errors_import.ids
+				= hidden_field_tag "source_system", params[:source_system]
+				= t("activerecord.models.#{etl_errors_import["resource"].underscore}")
+			%td
+				= etl_errors_import.error
+			%td
+				= etl_errors_import.count
+			%td
+				- klass = "SigimImports::#{resource}".constantize
+				- if resource=="Neighborhood"
+					.row
+						.col-sm-4
+							- klass_id = etl_errors_import.klass_id
+							- klass_id = sigim_id_by_id(klass_id) if !klass_id.nil?
+							= select(:city_id, city_by_ceara, "Cidades", "cities", cont, klass_id)
+						.col-sm-8
+							- neighborhoods = klass_id.nil? ? [] : neighborhood_by_city(klass_id)
+							- text = klass_id.nil? ? "Selecione uma cidade" : "Selecione um  Bairro"
+							= select(:resource_id, neighborhoods, text, "resources", cont)
+				- else
+					- collection = klass.to_s == "SigimImports::City" ? city_by_ceara : klass.all
+					= select(:resource_id, collection, nil, nil, cont)
+			%td
+				.text-center
+					= check_box_tag :validated
+			%td
+				.text-center
+					= check_box_tag :ignore
+			%td
+				.text-center
+					%a.btn.btn-success.submit{id: cont}
+						%span.glyphicon.glyphicon-ok

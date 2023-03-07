@@ -1,0 +1,28 @@
+pt-BR:
+
+  base:
+
+    errors:
+      cpf: "CPF (%{cpf}) já cadastrado na pessoa %{pes} (id:%{id})"
+      nis: "NIS (%{nis}) já cadastrado"
+      rg:  "RG %{rg} já cadastrado"
+      no_association: "%{name}"
+      create: "Nao consegui cadastrar %{name} na base da integração no momento da importação"
+      null: O registro %{resource} da API %{source} veio nulo
+      doubt: "Dúvidas entre: %{names}"
+      error_address: Não consegui salvar Endereço
+
+    import:
+      success_data: "%{source}: Página %{last_page} de %{total_pages} foi importada."
+      success_etl:  "%{source}: Processo de ETL realizado com importação de %{success} itens e %{failure} erros."
+
+    errors_type:
+      create: Novo(a)
+      association: Associação inexistente
+      address: Endereço
+      duplicity: Duplicidade
+      rule: Regras de cadastro
+      null: Item veio nulo
+
+    data_ignore:
+      cpf: CPF vazio

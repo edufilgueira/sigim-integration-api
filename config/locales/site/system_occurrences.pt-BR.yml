@@ -1,0 +1,36 @@
+pt-BR:
+  site:
+    system_occurrences:
+      index:
+        true:  Sim
+        false: Não
+        id: "Código"
+        response: "Resposta"
+        importe_error: "Erro de importação"
+        already_imported: "Importado"
+        ignore: "Ignorar"
+        created_at: "Criado em"
+        updated_at: "Atualizado em"
+        Neighborhood: "Bairro"
+      inconsistency:
+        true:  Sim
+        false: Não
+        id: "Código"
+        response: "Resposta"
+        importe_error: "Erro de importação"
+        already_imported: "Importado"
+        ignore: "Ignorar"
+        created_at: "Criado em"
+        updated_at: "Atualizado em"
+        Neighborhood: "Bairro"
+      ignored:
+        true:  Sim
+        false: Não
+        id: "Código"
+        response: "Resposta"
+        importe_error: "Erro de importação"
+        already_imported: "Importado"
+        ignore: "Ignorar"
+        created_at: "Criado em"
+        updated_at: "Atualizado em"
+        Neighborhood: "Bairro"

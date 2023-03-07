@@ -1,0 +1,27 @@
+%nav.navbar.navbar-default.navbar-static-top{role:"navigation", style:"margin-bottom: 0"}
+  .navbar-header
+    %a.navbar-brand{href:"/"}
+      %strong
+        = "SIGIM - IMPORTAÇÃO"
+
+  %ul.nav.navbar-top-links.navbar-right
+    %li
+      %br
+        %strong
+          = current_user.email
+
+  .navbar-default.sidebar{role:"navigation"}
+    .sidebar-nav.navbar-collapse
+      %ul.nav{id:"side-menu"}
+        %li
+          = link_to site_welcome_index_path do
+            <i class="fa fa-home"></i> Erros de Associação
+        %li
+          = link_to site_system_occurrences_path do
+            <i class="fa fa-info-circle"></i> Erros Gerais
+        %li
+          = link_to ignored_site_system_occurrences_path do
+            <i class="fa fa-info-circle"></i> Erros Ignorados
+        %li
+          = link_to destroy_user_session_path, turbo_method: :delete do
+            <i class="fa fa-sign-out fa-fw"></i> Sair

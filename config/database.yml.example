@@ -1,0 +1,31 @@
+
+default: &default
+  adapter: postgresql
+  pool: 5
+  timeout: 5000
+  host: localhost
+  username: postgres
+  password: postgres
+  port: 5432
+  schema_search_path: public
+  
+development:
+  primary:
+    <<: *default
+    database: sigim_integration_dev
+    database_tasks: true
+  sigim:
+    <<: *default
+    database: sigim_dev_db
+    database_tasks: false
+
+test:
+  <<: *default
+  #schema_search_path: sigim_test
+  database: sigim_integration_test
+production:
+  <<: *default
+  schema_search_path: sigim_integration_prod
+  database: sigim_prod_db
+  username: concerne
+  password: <%= ENV['CONCERNE_DATABASE_PASSWORD'] %>
