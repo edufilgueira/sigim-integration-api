@@ -6,8 +6,4 @@
 # Mark any vendored files as having been vendored.
 # vendor/* linguist-vendored
 
-# static/* linguist-vendored
-# app/* linguist-vendored
-
-*.kicad_pcb linguist-detectable=true
-*.erb linguist-detectable=true
+*.ruby linguist-detectable=true
