@@ -7,6 +7,6 @@
 # vendor/* linguist-vendored
 
 * linguist-vendored
-*.html linguist-vendored=false
-*.erb linguist-detectable=true
 public/* linguist-vendored
+#*.html linguist-vendored=false
+#*.erb linguist-detectable=true
