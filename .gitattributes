@@ -6,9 +6,8 @@
 # Mark any vendored files as having been vendored.
 # vendor/* linguist-vendored
 
+public/* linguist-vendored
+
 #* linguist-vendored
 #*.html linguist-vendored=true
-*.erb linguist-detectable=false
-#public/* linguist-vendored
-
-
+#*.erb linguist-detectable=false
