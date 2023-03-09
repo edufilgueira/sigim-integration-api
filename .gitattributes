@@ -9,5 +9,5 @@
 #public/* linguist-vendored
 
 * linguist-vendored
-*.rb linguist-vendored=false
+*.rb linguist-vendored=true
 #*.erb linguist-detectable=false
