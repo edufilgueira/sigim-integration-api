@@ -8,7 +8,7 @@
 
 #* linguist-vendored
 #*.html linguist-vendored=true
-*.erb linguist-detectable=true
+#*.erb linguist-detectable=true
 #public/* linguist-vendored
 
 
