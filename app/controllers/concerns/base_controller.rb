@@ -62,7 +62,7 @@ module BaseController
     @errors = []
     person = set_new_person(data)
     return if data_ignore?(data, person)
-    errors_verify(person)
+    verify_errors(person)
     if @errors.count == 0
       execute_save_etl(data, person)
     else
@@ -78,9 +78,13 @@ module BaseController
     resource = constantize("Integrations", model)
     resources = resource.where(hash)
     klass = resources.first
-    return verify_error_association(model, klass) if resources.count == 1
-    verify_error_duplicity(resources, model) if resources.count > 1
-    verify_error_create_and_null(model, name) if resources.count == 0
+    if resources.count == 1
+      return verify_error_association(model, klass)
+    elsif resources.count > 1
+      verify_error_duplicity(resources, model)
+    else
+      verify_error_create_and_null(model, name)
+    end
     return resource.new
   end
 
@@ -126,12 +130,27 @@ module BaseController
     end
   end
 
+  # def update_auxiliary(model, field)
+  #   list = system_occurrence.distinct_auxiliary_data(source_system, field)
+  #   import_auxiliary_data(model, list, field)
+  # end
+  
+  # def import_auxiliary_data(model, list, field)
+  #   list.each do | item |
+  #     instance = model.find_by(name: item[field.downcase].strip)
+  #     model.new_data(item[field.downcase].strip, source_system) if instance.nil?
+  #   end
+  # end
+
 
   private
+
+  # Ignore importation data in batch
 
   def data_ignore?(data, person)
     @ignore_error = []
     set_data_ignore(:cpf) if is_nil_or_blank?(person.cpf)
+    ignore_auxiliary_data_in_batch(person)
     if @ignore_error.count > 0
       data.ignore_error = @ignore_error
       data.ignore = true
@@ -140,6 +159,23 @@ module BaseController
     end
     false
   end
+  
+  def ignore_auxiliary_data_in_batch(person)
+    table_importation.each do | model |
+      ignore_auxiliary_data(model, person)
+    end
+  end
+
+  def ignore_auxiliary_data(model, person)
+    attribute = model.to_s.underscore+"_id"
+    id = person.send(attribute) if person.has_attribute?(attribute)
+    unless id.nil?
+      resource = constantize("Integrations", model).find_by(sigim_id: id)
+      set_data_ignore(model) if resource.ignore == true
+    end
+  end
+
+  # Page control
 
   def total_pages(url)
     total_count = select_max(url)
@@ -152,6 +188,8 @@ module BaseController
     system_occurrence.last_page_source_system(source_system)
   end
 
+  # ETL data importation
+
   def etl_itens_import
     @success = 0
     @failure = 0
@@ -161,34 +199,6 @@ module BaseController
       save_etl(data)
     end
   end
-
-  def source_system_sigim_id
-    Integrations::SourceSystem.find_by(source_system: source_system).sigim_id
-  end
-
-  def constantize(moduled, model)
-    "#{moduled.to_s}::#{model.to_s}".camelize.constantize
-  end
-  
-  def errors_verify(person)
-    if person.exists_cpf?
-      unless person.extract_default_fields.present?
-        pes = SigimImports::Person.find_by(cpf: person.cpf)
-        set_errors(message_error(:rule, "CPF", I18n.t('base.errors.cpf', cpf: person.cpf, pes: pes.name, id: pes.id), person.cpf))
-      end
-    end
-    set_errors(message_error(:rule, "NIS", I18n.t('base.errors.nis', nis: person.nis), person.nis)) if person.exists_nis?
-    set_errors(message_error(:rule, "RG",  I18n.t('base.errors.rg',  rg:  person.rg),  person.rg))  if person.exists_rg?
-  end
-
-  def set_errors(value)
-    @errors << value
-  end
-
-  def set_data_ignore(type)
-    message =  I18n.t('base.data_ignore.cpf') if type == :cpf
-    @ignore_error << { reason: message }
-  end
   
   def create_people_address(person_id, data)
     hash = change_fields_people_address(data)
@@ -197,23 +207,6 @@ module BaseController
     people_address = SigimImports::PeopleAddress.new(hash)
     return true if people_address.save
     false
-  end
-  
-  def set_error_import_etl(data, errors)
-    data.import_error = errors
-    data.already_imported = false
-    data
-  end
-
-  def attribute_remove(klass)
-    att = klass.attributes
-    att_rm = ["id", "source_system", "sigim_id", "validated", "ignore", "user_id", "created_at", "updated_at", "deleted_at"]
-    att_rm.each do |rm|
-      att.delete(rm)
-    end
-    function = "#{source_system}_overlapping_rule"
-    att = send(function, att, klass) if respond_to?(function.to_sym)
-    att
   end
 
   def execute_save_etl(data, person)
@@ -251,33 +244,16 @@ module BaseController
     person.origin_id = data.origin_id
     person
   end
-
-  def verify_error_association(model, klass)
-    msg = set_msg_no_association(klass)
-    msg += ' ('+klass.city.name+')' if model == :Neighborhood
-    city_id = klass.has_attribute?(:city_id) ? klass.city.id : nil
-    set_errors(message_error(:association, model, msg, klass.id, city_id)) if auxiliary_empty?(klass)
-    klass
-  end
-
-  def verify_error_duplicity(resources, model)
-    ids = list_ids(resources)
-    names = list_names(resources)
-    msg = set_msg_doubt(names)
-    set_errors(message_error(:duplicity, model, msg, ids))
-  end
-
-  def verify_error_create_and_null(model, name)
-    if !name.nil?
-      msg = set_msg_create(name)
-      set_errors(message_error(:create, model, msg, "null"))
-    else
-      msg = set_msg_null(model)
-      set_errors(message_error(:null, model, msg, "null"))
-    end
-  end
   
   # Helper
+
+  def constantize(moduled, model)
+    "#{moduled.to_s}::#{model.to_s}".camelize.constantize
+  end
+
+  def source_system_sigim_id
+    Integrations::SourceSystem.find_by(source_system: source_system).sigim_id
+  end
 
   def system_occurrence
     Integrations::SystemOccurrence
@@ -310,12 +286,98 @@ module BaseController
     names
   end
 
+  def attribute_remove(klass)
+    att = klass.attributes
+    att_rm = ["id", "source_system", "sigim_id", "validated", "ignore", "user_id", "created_at", "updated_at", "deleted_at"]
+    att_rm.each do |rm|
+      att.delete(rm)
+    end
+    function = "#{source_system}_overlapping_rule"
+    att = send(function, att, klass) if respond_to?(function.to_sym)
+    att
+  end
+
   def exist_id_import?(id)
     system_occurrence.find_by(origin_id: id, source_system: source_system).present?
   end
   
   def auxiliary_empty?(klass)
     !klass.nil? && klass.sigim_id.nil?
+  end
+ 
+  # Error management
+
+  def verify_errors(person)
+    if person.exists_cpf?
+      unless person.extract_default_fields.present?
+        pes = SigimImports::Person.find_by(cpf: person.cpf)
+        set_errors(message_error(:rule, "CPF", I18n.t('base.errors.cpf', cpf: person.cpf, pes: pes.name, id: pes.id), person.cpf))
+      end
+    end
+    set_errors(message_error(:rule, "NIS", I18n.t('base.errors.nis', nis: person.nis), person.nis)) if person.exists_nis?
+    set_errors(message_error(:rule, "RG",  I18n.t('base.errors.rg',  rg:  person.rg),  person.rg))  if person.exists_rg?
+  end
+
+  def verify_error_association(model, klass)
+    msg = set_msg_no_association(klass)
+    msg += ' ('+klass.city.name+')' if model == :Neighborhood
+    city_id = klass.has_attribute?(:city_id) ? klass.city.id : nil
+    set_errors(message_error(:association, model, msg, klass.id, city_id)) if auxiliary_empty?(klass)
+    klass
+  end
+
+  def verify_error_duplicity(resources, model)
+    ids = list_ids(resources)
+    names = list_names(resources)
+    msg = set_msg_doubt(names)
+    set_errors(message_error(:duplicity, model, msg, ids))
+  end
+
+  def verify_error_create_and_null(model, name)
+    if !name.nil?
+      msg = set_msg_create(name)
+      set_errors(message_error(:create, model, msg, "null"))
+    else
+      msg = set_msg_null(model)
+      set_errors(message_error(:null, model, msg, "null"))
+    end
+  end
+
+  def set_data_ignore(type)
+    message =  I18n.t('base.data_ignore.cpf')    if type == :cpf
+    message =  I18n.t('base.data_ignore.gender') if type == :Gender
+    @ignore_error << { reason: message }
+  end
+
+  def set_error_import_etl(data, errors)
+    data.import_error = errors
+    data.already_imported = false
+    data
+  end
+
+  def set_errors(value)
+    @errors << value
+  end
+  
+  def set_msg(error)
+    I18n.t("base.errors.#{error}")
+  end
+
+  def set_msg_no_association(klass)
+    return I18n.t('base.errors.no_association', name: klass.name)
+  end
+
+  def set_msg_doubt(names)
+    return I18n.t('base.errors.doubt', names: names)
+  end
+
+  def set_msg_create(name)
+    return I18n.t('base.errors.create', name: name)
+  end
+
+  def set_msg_null(resource)
+    resource = I18n.t("activerecord.models.#{resource.to_s.underscore}")
+    return I18n.t('base.errors.null', resource: resource, source: source_system) 
   end
 
   def message_error(error_type, classfy, error, id, klass_id=nil)
@@ -339,123 +401,6 @@ module BaseController
           )
   end
 
-  
-  # Error message
-  
-  def set_msg(error)
-    # return I18n.t('base.errors.no_association', name: klass.name) unless klass.nil?
-    # return I18n.t('base.errors.doubt', names: names)   unless names.nil?
-    # return I18n.t('base.errors.new', name: name)   if (error=="new" !name.nil?)
-    # return I18n.t('base.errors.null_record', name: name)   if (error=="new" !name.nil?)
-    I18n.t("base.errors.#{error}")
-  end
-
-  def set_msg_no_association(klass)
-    return I18n.t('base.errors.no_association', name: klass.name)
-  end
-
-  def set_msg_doubt(names)
-    return I18n.t('base.errors.doubt', names: names)
-  end
-
-  def set_msg_create(name)
-    return I18n.t('base.errors.create', name: name)
-  end
-
-  def set_msg_null(resource)
-    resource = I18n.t("activerecord.models.#{resource.to_s.underscore}")
-    return I18n.t('base.errors.null', resource: resource, source: source_system) 
-  end
-
-  # # Auxiliary data
-  
-  # def update_auxiliary(model, field)
-  #   list = system_occurrence.distinct_auxiliary_data(source_system, field)
-  #   import_auxiliary_data(model, list, field)
-  # end
-  
-  # def import_auxiliary_data(model, list, field)
-  #   list.each do | item |
-  #     instance = model.find_by(name: item[field.downcase].strip)
-  #     model.new_data(item[field.downcase].strip, source_system) if instance.nil?
-  #   end
-  # end
-  
-  # def update_auxiliary_data1
-  #   # Breed
-  #   update_auxiliary(:oisol, Integrations::Breed, 'racaCorDescricao')
-  #   ****update_auxiliary(:nudem, Integrations::Breed, 'raca')
-  
-  #   # City
-  #   #### ------- update_auxiliary(:oisol, Integrations::City, 'nacionalidadeDescricao')
-  #   #### ------- update_auxiliary(:nudem, Integrations::City, '**********************')
-  
-  #   # CivilStatus
-  #   update_auxiliary(:oisol, Integrations::CivilStatus, 'estadoCivilDescricao')
-  #   ****update_auxiliary(:nudem, Integrations::CivilStatus, 'estado_civil')
-  
-  #   # ContactType
-  #   #### ------- update_auxiliary(:oisol, Integrations::ContactType, '*****')
-  #   #### ------- update_auxiliary(:nudem, Integrations::ContactType, '*****')
-  
-  #   # CrimeType
-  #   #### ------- update_auxiliary(:oisol, Integrations::CrimeType, '*****')
-  #   #### ------- update_auxiliary(:nudem, Integrations::CrimeType, '*****')
-    
-  #   # CivilStatus
-  #   update_auxiliary(:oisol, Integrations::CivilStatus, 'estadoCivilDescricao')
-  #   update_auxiliary(:nudem, Integrations::CivilStatus, 'estado_civil')
-    
-  #   # Ethnicity
-  #   #### ------- update_auxiliary(:oisol, Integrations::Ethnicity, '*****')
-  #   #### ------- update_auxiliary(:nudem, Integrations::Ethnicity, '*****')
-    
-  #   # GenderIdentity
-  #   update_auxiliary(:oisol, Integrations::GenderIdentity, 'identidadeGeneroDescricao')
-  #   update_auxiliary(:nudem, Integrations::GenderIdentity, 'identidade_genero')
-
-  #   # Gender
-  #   update_auxiliary(:oisol, Integrations::Gender, 'generoDescricao')
-  #   #### ------- update_gender(:nudem, Integrations::Gender, 'sempre FEMININO')
-
-  #   # Neighborhood
-  #   # trabalhar com bairros da importacao update_auxiliary(:oisol, Integrations::Neighborhood, 'estadoCivilDescricao')
-  #   # trabalhar com bairros da importacao update_auxiliary(:nudem, Integrations::Neighborhood, 'estado_civil')
-
-  #   # ProtectiveMeasureType
-  #   #### ------- update_auxiliary(:oisol, Integrations::ProtectiveMeasureType, '*****')
-  #   #### ------- update_auxiliary(:nudem, Integrations::ProtectiveMeasureType, '*****')
-
-  #   # RelationshipDegree
-  #   #### ------- update_auxiliary(:oisol, Integrations::RelationshipDegree, '*****')
-  #   #### ------- update_auxiliary(:nudem, Integrations::RelationshipDegree, '*****')
-
-  #   # Scholarity
-  #   update_auxiliary(:oisol, Integrations::Scholarity, 'grauInstrucaoDescricao')
-  #   update_auxiliary(:nudem, Integrations::Scholarity, 'escolaridade')
-
-  #   # SexualOrientation
-  #   update_auxiliary(:oisol, Integrations::SexualOrientation, 'sexualidadeDescricao')
-  #   update_auxiliary(:nudem, Integrations::SexualOrientation, 'orientacao_sexual')
-
-  #   # SkinColor
-  #   #### ------- update_auxiliary(:oisol, Integrations::SkinColor, 'nao existe')
-  #   #### ------- update_auxiliary(:nudem, Integrations::SkinColor, 'nao existe')
-
-  #   # ViolenceMotivation
-  #   #### ------- update_auxiliary(:oisol, Integrations::ViolenceMotivation, '*****')
-  #   #### ------- update_auxiliary(:nudem, Integrations::ViolenceMotivation, '*****')
-
-  #   # ViolenceType
-  #   #### ------- update_auxiliary(:oisol, Integrations::ViolenceType, '*****')
-  #   #### ------- update_auxiliary(:nudem, Integrations::ViolenceType, '*****')
-
-  #   # HousingSituation
-  #   #update_auxiliary(:oisol, Integrations::HousingSituation, '*****')
-  #   #### ------- update_auxiliary(:nudem, Integrations::HousingSituation, '*****')
-  # end
-
-  
   # Constants
 
   def source_system

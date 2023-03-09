@@ -10,17 +10,7 @@
 			%th
 				Tipo de erros
 	- @errors_imports.each do |error_import|
-
-		- array = []
-		- error_import.import_error.each do | err |
-			- array.push(err["error_type"])
-		
-		- all_association = true
-		- array.each do |item|
-			- all_association = false if item != "association"
-
-
-		- unless all_association
+		- unless show_no_association(error_import)
 			%tbody
 				%tr.odd.gradeX
 					%td

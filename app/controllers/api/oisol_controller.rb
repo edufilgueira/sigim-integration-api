@@ -17,7 +17,7 @@ class Api::OisolController < ApplicationController
 
   SOURCE_SYSTEM = :oisol
   COLLECTION = "content"
-  ETL_QUANTITY  = 100
+  ETL_QUANTITY  = 10
   STATE = 6 #Ceará
 
   TABLE_IMPORTATION = [
@@ -46,6 +46,7 @@ class Api::OisolController < ApplicationController
   end
   
   def etl_imports
+    debugger
     etl_itens_import
     render json: success_etl(@success, @failure), status: 200
   end

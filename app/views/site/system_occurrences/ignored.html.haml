@@ -1,4 +1,4 @@
-- content_for :title, "Erros Ignorados"
+- content_for :title, "Ocorrências rejeitadas"
 
 - @errors_ignoreds.each do |errors_ignored|
 	%table.table.table-striped.table-bordered.table-hover
@@ -9,9 +9,10 @@
 				%th{style:"width:450px"}
 					Nome
 				%th
-					Tipo de erros
-				%th{style:"width:50px"}
-					QTD
+					Erros de importação
+				%th
+					Auto ignore
+			
 		%tbody
 			%tr.odd.gradeX
 				%td
@@ -20,22 +21,29 @@
 					= errors_ignored[:response]["nome"] if errors_ignored.source_system == "oisol"
 					= errors_ignored[:response]["nome"] if errors_ignored.source_system == "nudem"
 				%td
-					- double=[]
-					- errors_ignored.import_error.each do | error |
-						%span.label.label-danger
-							= t("base.errors_type.#{error["error_type"]}") if	!double.include?(error["error_type"])
-							&nbsp;
-						- double.push(error["error_type"])
+					- if errors_ignored.import_error?
+						- double=[]
+						- errors_ignored.import_error.each do | error |
+							%span.label.label-danger
+								= t("base.errors_type.#{error["error_type"]}") if	!double.include?(error["error_type"])
+								&nbsp;
+							- double.push(error["error_type"])
+			
 				%td
-					= errors_ignored.import_error.count
+					- if errors_ignored.ignore_error?
+						- errors_ignored.ignore_error.each do | error |
+							%span.label.label-danger
+								= error["reason"]
+				
 			%tr
 				%td{colspan:9}
 					%table.table
-						- errors_ignored.import_error.each do | error |
-							- if error["error_type"] != "association"
-								%tr
-									%td
-										= t("base.errors_type.#{error["error_type"]}")
-										= t("activerecord.models.#{error["classfy"].underscore}")
+						- if errors_ignored.import_error?
+							- errors_ignored.import_error.each do | error |
+								- if error["error_type"] != "association"
+									%tr
+										%td
+											= t("base.errors_type.#{error["error_type"]}")
+											= t("activerecord.models.#{error["classfy"].underscore}")
 									%td
 										= error["error"]

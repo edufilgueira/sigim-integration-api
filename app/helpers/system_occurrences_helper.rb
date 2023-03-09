@@ -20,4 +20,17 @@ module SystemOccurrencesHelper
   def sigim_id_by_id(id)
     Integrations::City.find(id).sigim_id
   end
+
+  def show_no_association(error_import)
+    array = []
+		error_import.import_error.each do | err |
+			array.push(err["error_type"])
+    end
+		all_association = true
+		array.each do |item|
+			all_association = false if item != "association"
+    end
+    all_association
+  end
+  
 end

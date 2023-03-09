@@ -15,4 +15,10 @@ class SigimImports::Neighborhood < SigimRecord
 		
 	validates :name, presence: true
 
+	# Scope
+
+  def self.by_city(id)
+    where(city_id: id)
+  end
+
 end

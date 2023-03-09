@@ -40,6 +40,10 @@ class Integrations::SystemOccurrence < ApplicationRecord
       .order(:id)
   end
 
+  def self.by_id(ids)
+    where(id: ids)
+  end
+
   def self.distinct_source_system_errors_type_create
     find_by_sql("
       SELECT DISTINCT source_system, count(*) count

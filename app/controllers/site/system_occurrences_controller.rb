@@ -10,22 +10,20 @@ class Site::SystemOccurrencesController < ApplicationController
   end
 
   def authorize
-    ids           = params[:ids].split(" ")
-    resource_id   = params[:resource_id]
-    resource_text = params[:resource]
-    validated     = to_boolean(params[:validated])
-    ignore        = to_boolean(params[:ignore])
-    klass    = "Integrations::#{resource_text}".constantize
-    resource = klass.find(params[:classfy_id])
-    
-    resource.sigim_id  = resource_id if !resource_id.blank?
-    resource.validated = true        if !resource_id.blank?
-    resource.validated = true if resource_id.blank? && validated
-    resource.ignore    = true if ignore
-    resource.user_id   = current_user.id
-    
-    remove_specific_error(resource_text, ids)
-    resource.save
+    set_params_authorize
+    resource = @klass.find(@classfy_id)
+    resource.sigim_id  = @resource_id if !@resource_id.blank?
+    resource.validated = true        if !@resource_id.blank?
+    resource.validated = true if @resource_id.blank? && @validated
+    resource.user_id = current_user.id
+    ApplicationRecord.transaction do
+      if @ignore
+        resource.ignore = true
+        ignore_system_occurrence_in_batch
+      end
+      remove_specific_error(@resource_text)
+      raise ActiveRecord::Rollback unless resource.save
+    end
   end
 
   def inconsistency
@@ -39,25 +37,49 @@ class Site::SystemOccurrencesController < ApplicationController
   end
 
   def neighborhood_by_city
-    @neighborhoods = SigimImports::Neighborhood.where(city_id:  params[:city_id])
+    @neighborhoods = SigimImports::Neighborhood.by_city(params[:city_id])
     @cont = params[:cont]
   end
 
-  private 
+  private
 
-  def remove_specific_error(resource, ids)
-    system_occurrences = Integrations::SystemOccurrence.where(id: ids)
-    system_occurrences.each do | system_occurrence |
+  def ignore_system_occurrence_in_batch
+    system_occurrence_by_id.each do | system_occurrence |
+      system_occurrence.ignore = true
+      raise ActiveRecord::Rollback unless system_occurrence.save
+    end
+  end
+
+  def remove_specific_error(resource)
+    system_occurrence_by_id.each do | system_occurrence |
       system_occurrence.import_error.each do | error |
         if error["classfy"] == resource
           system_occurrence.import_error.delete(error)
-          system_occurrence.save
+          raise ActiveRecord::Rollback unless system_occurrence.save
         end
       end
     end
   end
 
+  def set_params_authorize
+    @resource_id   = params[:resource_id]
+    @resource_text = params[:resource]
+    @classfy_id    = params[:classfy_id]
+    @validated     = to_boolean(params[:validated])
+    @ignore        = to_boolean(params[:ignore])
+    @klass    = "Integrations::#{@resource_text}".constantize
+  end
+
+  def system_occurrence_by_id
+    Integrations::SystemOccurrence.by_id(get_ids)
+  end
+
+  def get_ids
+    params[:ids].split(" ")
+  end
+
   def to_boolean(value)
     ActiveRecord::Type::Boolean.new.cast(value)
   end
+
 end
