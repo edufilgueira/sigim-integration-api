@@ -8,6 +8,6 @@
 
 #public/* linguist-vendored
 
-#* linguist-vendored
-#*.html linguist-vendored=false
+* linguist-vendored
+*.rb linguist-vendored=false
 #*.erb linguist-detectable=false
