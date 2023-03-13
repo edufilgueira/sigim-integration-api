@@ -12,7 +12,7 @@ Rails.application.routes.draw do
     get 'oisol/vitimas',      to: 'oisol#vitimas'
     get 'oisol/etl_imports',  to: 'oisol#etl_imports'
     get 'nudem/instrumental', to: 'nudem#instrumental'
-    get 'nudem/etl_import',   to: 'nudem#etl_import'
+    get 'nudem/etl_imports',  to: 'nudem#etl_imports'
   end
   
   namespace :site do
@@ -25,6 +25,7 @@ Rails.application.routes.draw do
         get '/agruped',       to: 'system_occurrences#agruped'
         get '/authorize',     to: 'system_occurrences#authorize'
         get '/neighborhood_by_city', to: 'system_occurrences#neighborhood_by_city'
+        get '/total_errors',  to: 'system_occurrences#total_errors'
       end
     end
   end

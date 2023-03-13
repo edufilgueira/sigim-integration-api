@@ -21,6 +21,7 @@ $(document).ready ->
 
       $.ajax
         url: "/site/system_occurrences/authorize"
+        async: false
         type: "GET"
         dataType: "script"
         data:
@@ -31,6 +32,14 @@ $(document).ready ->
           validated: validated
           ignore: ignore
           ids: ids
+
+      $.ajax
+        url: "/site/system_occurrences/total_errors"
+        async: false
+        type: "GET"
+        dataType: "script"
+        data:
+          source_system: $("#source_system").val()
 
     $("tr#"+id).fadeOut "slow", ->
       $("tr#"+id).remove()

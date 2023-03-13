@@ -2,26 +2,29 @@ class Site::SystemOccurrencesController < ApplicationController
   before_action :authenticate_user!
   layout 'site'
   def index
-    @errors_imports = Integrations::SystemOccurrence.errors_imports #.page(params[:page]).per(10)
+    @errors_imports = Integrations::SystemOccurrence.errors_imports
   end 
   
   def ignored
-    @errors_ignoreds = Integrations::SystemOccurrence.errors_ignored #.page(params[:page]).per(10)
+    @errors_ignoreds = Integrations::SystemOccurrence.errors_ignored.page(params[:page]).per(5)
   end
 
   def authorize
     set_params_authorize
-    resource = @klass.find(@classfy_id)
-    resource.sigim_id  = @resource_id if !@resource_id.blank?
-    resource.validated = true        if !@resource_id.blank?
-    resource.validated = true if @resource_id.blank? && @validated
-    resource.user_id = current_user.id
     ApplicationRecord.transaction do
+      resource = @klass.find(@classfy_id)
       if @ignore
         resource.ignore = true
-        ignore_system_occurrence_in_batch
+        ignore_system_occurrence_in_batch(@resource)
+      else
+        if !@resource_id.blank?
+          resource.sigim_id  = @resource_id
+          resource.validated = true
+        end
+        resource.validated = true if @resource_id.blank? && @validated
+        remove_specific_error(@resource)
       end
-      remove_specific_error(@resource_text)
+      resource.user_id = current_user.id
       raise ActiveRecord::Rollback unless resource.save
     end
   end
@@ -34,6 +37,7 @@ class Site::SystemOccurrencesController < ApplicationController
   def agruped
     @errors_type_associations = Integrations::SystemOccurrence
       .errors_type_associations(params[:source_system])
+    @paginate_agruped = Kaminari.paginate_array(@errors_type_associations).page(params[:page]).per(20)
   end
 
   def neighborhood_by_city
@@ -41,11 +45,21 @@ class Site::SystemOccurrencesController < ApplicationController
     @cont = params[:cont]
   end
 
+  def total_errors
+    errors = Integrations::SystemOccurrence.errors_type_associations(params[:source_system])
+    @total_errors = 0
+    errors.each { |error| @total_errors += error.count }
+    @total_errors
+  end
+
   private
 
-  def ignore_system_occurrence_in_batch
+  def ignore_system_occurrence_in_batch(resource)
     system_occurrence_by_id.each do | system_occurrence |
       system_occurrence.ignore = true
+      ignore_error = []
+      ignore_error << { reason: I18n.t("base.data_ignore.#{resource.to_s.underscore}") }
+      system_occurrence.ignore_error = ignore_error
       raise ActiveRecord::Rollback unless system_occurrence.save
     end
   end
@@ -63,11 +77,11 @@ class Site::SystemOccurrencesController < ApplicationController
 
   def set_params_authorize
     @resource_id   = params[:resource_id]
-    @resource_text = params[:resource]
+    @resource = params[:resource]
     @classfy_id    = params[:classfy_id]
     @validated     = to_boolean(params[:validated])
     @ignore        = to_boolean(params[:ignore])
-    @klass    = "Integrations::#{@resource_text}".constantize
+    @klass    = "Integrations::#{@resource}".constantize
   end
 
   def system_occurrence_by_id

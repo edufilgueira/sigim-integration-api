@@ -217,6 +217,10 @@ GEM
       zeitwerk (~> 2.5)
     rainbow (3.1.1)
     rake (13.0.6)
+    ransack (4.0.0)
+      activerecord (>= 6.1.5)
+      activesupport (>= 6.1.5)
+      i18n
     regexp_parser (2.6.2)
     responders (3.1.0)
       actionpack (>= 5.2)
@@ -298,6 +302,7 @@ DEPENDENCIES
   rails (~> 7.0.4)
   rails-i18n (~> 7.0.0)
   rails_layout
+  ransack (~> 4.0)
   rest-client (= 2.1.0)
   rubocop
   sassc-rails

@@ -23,6 +23,7 @@ gem "haml-rails", "2.1.0"
 gem 'kaminari', "1.2.2"
 gem 'jquery-rails', "4.5.1"
 gem 'select2-rails', '4.0.13'
+gem 'ransack', '~> 4.0'
 
 # Use Redis adapter to run Action Cable in production
 # gem "redis", "~> 4.0"

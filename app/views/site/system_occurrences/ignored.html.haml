@@ -1,5 +1,4 @@
-- content_for :title, "Ocorrências rejeitadas"
-
+-content_for :title, "Ocorrências rejeitadas"
 - @errors_ignoreds.each do |errors_ignored|
 	%table.table.table-striped.table-bordered.table-hover
 		%thead
@@ -47,3 +46,6 @@
 											= t("activerecord.models.#{error["classfy"].underscore}")
 									%td
 										= error["error"]
+
+.text-center
+	= paginate @errors_ignoreds

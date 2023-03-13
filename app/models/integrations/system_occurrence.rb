@@ -50,7 +50,9 @@ class Integrations::SystemOccurrence < ApplicationRecord
       FROM 
         system_occurrences,
         jsonb_array_elements(import_error) with ordinality arr(item_object, position)
-      WHERE arr.item_object->>'error_type' = 'association'
+      WHERE 
+        arr.item_object->>'error_type' = 'association'
+        AND ignore != true
       group by source_system")
   end
 
@@ -69,9 +71,10 @@ class Integrations::SystemOccurrence < ApplicationRecord
         jsonb_array_elements(import_error) with ordinality arr(item_object, position)
       WHERE 
         arr.item_object->>'error_type' = 'association'
-        and source_system = #{source_system}
-        group by source_system, classfy_id, resource, klass_id, error
-      order by count desc ")
+        AND source_system = #{source_system}
+        AND ignore != true
+      GROUP BY source_system, classfy_id, resource, klass_id, error
+      ORDER BY count desc ")
   end
 
   def self.distinct_auxiliary_data(source_system, field)

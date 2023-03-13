@@ -8,7 +8,7 @@ pt-BR:
       rg:  "RG %{rg} já cadastrado"
       no_association: "%{name}"
       create: "Nao consegui cadastrar %{name} na base da integração no momento da importação"
-      null: O registro %{resource} da API %{source} veio nulo
+      is_null: O registro %{resource} da API %{source} veio nulo
       doubt: "Dúvidas entre: %{names}"
       error_address: Não consegui salvar Endereço
 
@@ -26,3 +26,13 @@ pt-BR:
 
     data_ignore:
       cpf: CPF vazio
+      gender: Genero ignorado
+      breed: Raça ignorada
+      city: Cidade ignorada
+      civil_status: Estado civil ignorado
+      gender_identity: Identidade de genero ignorado
+      gender: Genero ignorado
+      neighborhood: Bairro ignorado
+      scholarity: Escolaridade ignorada
+      sexual_orientation: Orientação sexual ignorada
+      name: Nome ignorado

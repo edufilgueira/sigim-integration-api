@@ -27,7 +27,8 @@ class Api::NudemController < ApplicationController
     :Gender,
     :Neighborhood,
     :Scholarity,
-    :SexualOrientation
+    :SexualOrientation,
+    :HousingSituation
   ]
 
   def instrumental
@@ -45,14 +46,17 @@ class Api::NudemController < ApplicationController
   end
 
   def etl_imports
-    change_convertion_auxiliary_data
-    association_sigim_convertion_auxiliary_data
-    @success = 0
-    @failure = 0
-    etl_itens_import.each do | data |
-      save_etl(data)
-    end
+    etl_itens_import
     render json: success_etl(@success, @failure), status: 200
+  end
+
+  def oisol_overlapping_rule(att, klass)
+    model = klass.to_s.split(":")[2]
+
+    att["state_id"] = state_id                    if model == "City"
+    obj = Integrations::City.find(att["city_id"]) if model == "Neighborhood"
+    att["city_id"] = obj.sigim_id                 if model == "Neighborhood"
+    att
   end
 
 
@@ -65,8 +69,8 @@ class Api::NudemController < ApplicationController
     pes.cpf            = json["cpf"].strip unless json["cpf"].nil?
     pes.name           = json["nome"].strip unless json["nome"].nil?
     pes.birth_date     = json["data_nascimento"].strip unless json["data_nascimento"].nil?
-    pes.average_income = json["renda_mensal"].strip unless json["renda_mensal"].nil?
-    pes.number_children= json["quant_filhos"].strip unless json["quant_filhos"].nil?
+    pes.average_income = json["renda_mensal"] unless json["renda_mensal"].nil?
+    pes.number_children= json["quant_filhos"] unless json["quant_filhos"].nil?
     pes.breed_id              = auxiliary_table_map(:Breed, json["raca"]).sigim_id
     pes.scholarity_id         = auxiliary_table_map(:Scholarity, json["escolaridade"]).sigim_id
     pes.gender_id = 2         # Sempre Feminino
@@ -74,8 +78,6 @@ class Api::NudemController < ApplicationController
     pes.gender_identity_id    = auxiliary_table_map(:GenderIdentity, json["identidade_genero"]).sigim_id
     pes.civil_status_id       = auxiliary_table_map(:CivilStatus, json["estado_civil"]).sigim_id
     pes.housing_situation_id  = auxiliary_table_map(:HousingSituation, json["reside_com"]).sigim_id
-
-    
     # Provoca erros na cidade e bairro, caso exista
     city             = auxiliary_table_map(:City, search_city_in_address(json["endereco"]))
     @neighborhood_id = auxiliary_table_map(:Neighborhood, json["bairro"], :city_id, city.id).sigim_id if !city.sigim_id.nil?
@@ -104,18 +106,17 @@ class Api::NudemController < ApplicationController
 
   def update_auxiliary_data(json)
     Integrations::Breed.new_data(source_system, json["raca"])
-    Integrations::CivilStatus.new_data(source_system, json["estado_civil"]) 
-    Integrations::GenderIdentity.new_data(source_system, json["identidade_genero"]) 
-    Integrations::SexualOrientation.new_data(source_system, json["orientacao_sexual"])
     Integrations::Scholarity.new_data(source_system, json["escolaridade"])
+    Integrations::SexualOrientation.new_data(source_system, json["orientacao_sexual"])
+    Integrations::GenderIdentity.new_data(source_system, json["identidade_genero"]) 
+    Integrations::CivilStatus.new_data(source_system, json["estado_civil"])
+    Integrations::HousingSituation.new_data(source_system, json["reside_com"])
 
     state = Integrations::State.new_data(source_system, "Ceará")
     city_name = search_city_in_address(json["endereco"])
-    city  = Integrations::City.new_data(source_system, city_name, state.id)
+    city  = Integrations::City.new_data(source_system, city_name, state.id) unless city_name.nil?
     Integrations::Neighborhood.new_data(source_system, json["bairro"], city.id) unless (city.nil? || json["bairro"].nil?)
   end
-  
-  # Helper
   
   # Conect Oauth2 API
 

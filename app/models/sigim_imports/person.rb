@@ -1,6 +1,13 @@
 class SigimImports::Person < SigimRecord
   include Fonetical
 
+  
+  # Instance scope
+
+  def without_default_fields
+    self.attributes.except!("id", "fonetical", "created_at", "updated_at")
+  end
+
   # Scope
   
   def exists_nis?
@@ -19,10 +26,6 @@ class SigimImports::Person < SigimRecord
     return SigimImports::Person.find_by(rg: self.rg)
             .present? unless (self.rg.nil? || self.rg.blank?)
     false
-  end
-
-  def extract_default_fields
-    self.attributes.except!("id", "fonetical", "created_at", "updated_at")
   end
 
 end

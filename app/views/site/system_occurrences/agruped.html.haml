@@ -1,8 +1,11 @@
 - content_for :title, "Associações inexistentes #{params[:name].upcase}"
+= hidden_field_tag("source_system", params[:source_system], id:"source_system")
 
 %table.table.table-striped.table-bordered.table-hover
 	%thead
 		%tr
+			%th
+				Ids
 			%th
 				Recurso
 			%th{style:"width:200px"}
@@ -24,6 +27,8 @@
 		- resource = etl_errors_import.resource
 
 		%tr.odd.gradeX{id: cont}
+			%td
+				= etl_errors_import.ids
 			%td
 				= hidden_field_tag "resource", resource
 				= hidden_field_tag "classfy_id", etl_errors_import.classfy_id
@@ -59,3 +64,12 @@
 				.text-center
 					%a.btn.btn-success.submit{id: cont}
 						%span.glyphicon.glyphicon-ok
+
+%center
+	%strong
+		Total de itens:
+		%span{id: "total"}
+			= total_errors
+
+.text-center
+	= paginate @paginate_agruped

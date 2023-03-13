@@ -17,7 +17,7 @@ class Api::OisolController < ApplicationController
 
   SOURCE_SYSTEM = :oisol
   COLLECTION = "content"
-  ETL_QUANTITY  = 10
+  ETL_QUANTITY  = 100
   STATE = 6 #Ceará
 
   TABLE_IMPORTATION = [
@@ -46,7 +46,6 @@ class Api::OisolController < ApplicationController
   end
   
   def etl_imports
-    debugger
     etl_itens_import
     render json: success_etl(@success, @failure), status: 200
   end
@@ -82,8 +81,8 @@ class Api::OisolController < ApplicationController
     pes.scholarity_id         = auxiliary_table_map(:Scholarity, json["grauInstrucaoDescricao"]).sigim_id
     # Provoca erros na cidade e bairro, caso exista
     address = json["endereco"]["bairro"]
-    city    = auxiliary_table_map(:City, address["cidadeNome"])
-    @neighborhood_id = auxiliary_table_map(:Neighborhood, address["nome"], :city_id, city.id).sigim_id if !city.sigim_id.nil?
+    city = auxiliary_table_map(:City, address["cidadeNome"]) if !address["cidadeNome"].nil?
+    @neighborhood_id = auxiliary_table_map(:Neighborhood, address["nome"], :city_id, city.id).sigim_id if (!city.nil? && !city.sigim_id.nil?)
     pes
   end
 
@@ -108,7 +107,6 @@ class Api::OisolController < ApplicationController
     city  = Integrations::City.new_data(source_system, json["endereco"]["bairro"]["cidadeNome"], state.id)
     Integrations::Neighborhood.new_data(source_system, json["endereco"]["bairro"]["nome"], city.id)
   end
-  
   
   # Conect Oauth2 API
   

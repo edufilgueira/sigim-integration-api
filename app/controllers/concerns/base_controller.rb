@@ -58,6 +58,17 @@ module BaseController
     false
   end
 
+  def etl_itens_import
+    @ignored_names = Integrations::AutoIgnoreName.array_of_names
+    @success = 0
+    @failure = 0
+    change_and_associate_auxiliary_data
+    itens = system_occurrence.etl_itens_import(source_system, etl_quantity)
+    itens.each do | data |
+      save_etl(data)
+    end
+  end
+
   def save_etl(data)
     @errors = []
     person = set_new_person(data)
@@ -149,8 +160,7 @@ module BaseController
 
   def data_ignore?(data, person)
     @ignore_error = []
-    set_data_ignore(:cpf) if is_nil_or_blank?(person.cpf)
-    ignore_auxiliary_data_in_batch(person)
+    ignore_data_in_batch(person)
     if @ignore_error.count > 0
       data.ignore_error = @ignore_error
       data.ignore = true
@@ -159,11 +169,18 @@ module BaseController
     end
     false
   end
-  
-  def ignore_auxiliary_data_in_batch(person)
+
+  def ignore_data_in_batch(person)
+    set_data_ignore(:cpf) if is_nil_or_blank?(person.cpf)
+    set_data_ignore(:name) if auto_ignore_name?(person.name)
     table_importation.each do | model |
       ignore_auxiliary_data(model, person)
     end
+  end
+
+  def auto_ignore_name?(name)
+    return true if @ignored_names.include?(name)
+    false
   end
 
   def ignore_auxiliary_data(model, person)
@@ -171,7 +188,7 @@ module BaseController
     id = person.send(attribute) if person.has_attribute?(attribute)
     unless id.nil?
       resource = constantize("Integrations", model).find_by(sigim_id: id)
-      set_data_ignore(model) if resource.ignore == true
+      set_data_ignore(model) if (!resource.nil? && resource.ignore == true)
     end
   end
 
@@ -189,16 +206,6 @@ module BaseController
   end
 
   # ETL data importation
-
-  def etl_itens_import
-    @success = 0
-    @failure = 0
-    change_and_associate_auxiliary_data
-    itens = system_occurrence.etl_itens_import(source_system, etl_quantity)
-    itens.each do | data |
-      save_etl(data)
-    end
-  end
   
   def create_people_address(person_id, data)
     hash = change_fields_people_address(data)
@@ -309,7 +316,7 @@ module BaseController
 
   def verify_errors(person)
     if person.exists_cpf?
-      unless person.extract_default_fields.present?
+      unless person.without_default_fields.present?
         pes = SigimImports::Person.find_by(cpf: person.cpf)
         set_errors(message_error(:rule, "CPF", I18n.t('base.errors.cpf', cpf: person.cpf, pes: pes.name, id: pes.id), person.cpf))
       end
@@ -344,8 +351,9 @@ module BaseController
   end
 
   def set_data_ignore(type)
-    message =  I18n.t('base.data_ignore.cpf')    if type == :cpf
-    message =  I18n.t('base.data_ignore.gender') if type == :Gender
+    message =  set_msg_ignore('cpf')     if type == :cpf
+    message =  set_msg_ignore('name')     if type == :name
+    set_msg_ignore(type.to_s.underscore) if table_importation.include?(type)
     @ignore_error << { reason: message }
   end
 
@@ -363,6 +371,10 @@ module BaseController
     I18n.t("base.errors.#{error}")
   end
 
+  def set_msg_ignore(key)
+    I18n.t("base.data_ignore.#{key}")
+  end
+
   def set_msg_no_association(klass)
     return I18n.t('base.errors.no_association', name: klass.name)
   end
@@ -372,12 +384,12 @@ module BaseController
   end
 
   def set_msg_create(name)
-    return I18n.t('base.errors.create', name: name)
+    return I18n.t('base.errors.create', name: name.upcase)
   end
 
   def set_msg_null(resource)
     resource = I18n.t("activerecord.models.#{resource.to_s.underscore}")
-    return I18n.t('base.errors.null', resource: resource, source: source_system) 
+    return I18n.t('base.errors.is_null', resource: resource.upcase, source: source_system.upcase) 
   end
 
   def message_error(error_type, classfy, error, id, klass_id=nil)

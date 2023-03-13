@@ -23,7 +23,8 @@ class SigimImports::City < SigimRecord
 
 	def self.array_of_names(state_id)
 		# Retorna array das cidades
-		where(state_id: state_id).pluck(:name).uniq(&:downcase).sort_by(&:downcase)
+		where(state_id: state_id).pluck(:name)
+			.uniq(&:downcase).sort_by(&:downcase)
 	end
 
 	def self.fonetical(names)

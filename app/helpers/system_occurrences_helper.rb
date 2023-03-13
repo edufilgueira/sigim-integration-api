@@ -32,5 +32,13 @@ module SystemOccurrencesHelper
     end
     all_association
   end
+
+  def total_errors
+    cont = 0
+    @errors_type_associations.each do | etl_errors_import |
+      cont += etl_errors_import.count 
+    end
+    cont
+  end
   
 end
