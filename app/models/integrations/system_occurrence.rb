@@ -32,6 +32,7 @@ class Integrations::SystemOccurrence < ApplicationRecord
   def self.errors_imports
     where(already_imported: false)
       .where.not(import_error: nil)
+      .where.not(ignore: true)
   end
 
   def self.errors_ignored
@@ -44,6 +45,38 @@ class Integrations::SystemOccurrence < ApplicationRecord
     where(id: ids)
   end
 
+  def self.filtered_errors_ignored(where)
+    find_by_sql("
+  SELECT id, origin_id, response, source_system,
+    import_error #>> '{}' AS import_error,
+    ignore_error #>> '{}' AS ignore_error
+  FROM 
+    public.system_occurrences
+  WHERE 1=1 #{where}
+  and ignore = true
+    ORDER BY id
+    ")
+  end
+
+  def self.filtered_distinc_error_type
+    find_by_sql("
+      SELECT DISTINCT arr.item_object->>'error_type' error_type
+      FROM 
+        system_occurrences,
+        jsonb_array_elements(import_error) with ordinality arr(item_object, position)
+      GROUP BY error_type
+      ")
+  end
+  
+  def self.filtered_distinc_ignore_error
+    find_by_sql("
+    SELECT DISTINCT ignore_error #>> '{}' AS ignore_error
+    FROM 
+      system_occurrences
+    GROUP BY ignore_error
+    ")
+  end
+  
   def self.distinct_source_system_errors_type_create
     find_by_sql("
       SELECT DISTINCT source_system, count(*) count
@@ -71,7 +104,7 @@ class Integrations::SystemOccurrence < ApplicationRecord
         jsonb_array_elements(import_error) with ordinality arr(item_object, position)
       WHERE 
         arr.item_object->>'error_type' = 'association'
-        AND source_system = #{source_system}
+        AND source_system = #{SOURCE_SYSTEM.find_index(source_system.to_sym)}
         AND ignore != true
       GROUP BY source_system, classfy_id, resource, klass_id, error
       ORDER BY count desc ")
@@ -82,4 +115,5 @@ class Integrations::SystemOccurrence < ApplicationRecord
       .where.not("response->'#{field}' in ('null')")
       .distinct.select("response->'#{field}' #{field}")
   end
+
 end

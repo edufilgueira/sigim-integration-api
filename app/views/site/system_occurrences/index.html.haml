@@ -1,5 +1,4 @@
 - content_for :title, "Erros Gerais"
-
 %table.table.table-striped.table-bordered.table-hover
 	%thead
 		%tr
@@ -31,8 +30,12 @@
 							- error_import.import_error.each do | error |
 								- if error["error_type"] != "association"
 									%tr
-										%td
+										%td{style:"width:150px"}
 											= t("base.errors_type.#{error["error_type"]}")
 											= t("activerecord.models.#{error["classfy"].underscore}")
 										%td
 											= error["error"]
+										%td
+											= error["id"] unless error["id"] == "null"
+										%td{style:"width:250px"}
+											= error["address"]

@@ -52,10 +52,11 @@ class Api::OisolController < ApplicationController
   
   def oisol_overlapping_rule(att, klass)
     model = klass.to_s.split(":")[2]
-
-    att["state_id"] = state_id                    if model == "City"
-    obj = Integrations::City.find(att["city_id"]) if model == "Neighborhood"
-    att["city_id"] = obj.sigim_id                 if model == "Neighborhood"
+    att["state_id"] = state_id if model == "City"
+    if model == "Neighborhood"
+      obj = Integrations::City.find(att["city_id"])
+      att["city_id"] = obj.sigim_id
+    end
     att
   end
 
@@ -65,34 +66,28 @@ class Api::OisolController < ApplicationController
   # Importation
 
   def new_person(json)
-    pes = SigimImports::Person.new
-    pes.cpf            = json["cpf"].strip unless is_nil_or_blank?(json["cpf"])
-    pes.rg             = json["rg"].strip unless is_nil_or_blank?(json["rg"])
-    pes.name           = json["nome"].strip unless is_nil_or_blank?(json["nome"])
-    pes.nis            = json["nis"].strip unless is_nil_or_blank?(json["nis"])
-    pes.social_name    = json["nomeSocial"].strip unless is_nil_or_blank?(json["nomeSocial"]) 
-    pes.birth_date     = json["dataNascimento"].strip unless is_nil_or_blank?(json["dataNascimento"])
-    pes.average_income = json["rendaDescricao"].strip unless is_nil_or_blank?(json["rendaDescricao"])
-    pes.gender_id             = auxiliary_table_map(:Gender, json["generoDescricao"]).sigim_id
-    pes.gender_identity_id    = auxiliary_table_map(:GenderIdentity, json["identidadeGeneroDescricao"]).sigim_id
-    pes.sexual_orientation_id = auxiliary_table_map(:SexualOrientation, json["sexualidadeDescricao"]).sigim_id
-    pes.breed_id              = auxiliary_table_map(:Breed, json["racaCorDescricao"]).sigim_id
-    pes.civil_status_id       = auxiliary_table_map(:CivilStatus, json["estadoCivilDescricao"]).sigim_id
-    pes.scholarity_id         = auxiliary_table_map(:Scholarity, json["grauInstrucaoDescricao"]).sigim_id
-    # Provoca erros na cidade e bairro, caso exista
+    pes = super
+    
     address = json["endereco"]["bairro"]
-    city = auxiliary_table_map(:City, address["cidadeNome"]) if !address["cidadeNome"].nil?
-    @neighborhood_id = auxiliary_table_map(:Neighborhood, address["nome"], :city_id, city.id).sigim_id if (!city.nil? && !city.sigim_id.nil?)
+    if !address["cidadeNome"].nil?
+      city = auxiliary_table_map(:City, address["cidadeNome"])
+      pes.send("old_city=", city) unless city.nil?
+      if (!city.nil? && !city.sigim_id.nil?)
+        neighborhood = auxiliary_table_map(:Neighborhood, address["nome"], :city_id, city.id)
+        @neighborhood_id = neighborhood&.sigim_id
+        pes.send("old_neighborhood=", neighborhood) unless neighborhood.nil?
+      end
+    end
     pes
   end
 
   def change_fields_people_address(json)
     address = json["endereco"]
     hash = {}
-    hash["street_name"] =        address["logradouro"]  unless is_nil_or_blank?(address["logradouro"])
-    hash["street_number"] =      address["numero"]      unless is_nil_or_blank?(address["numero"])
+    hash["street_name"]        = address["logradouro"]  unless is_nil_or_blank?(address["logradouro"])
+    hash["street_number"]      = address["numero"]      unless is_nil_or_blank?(address["numero"])
     hash["address_complement"] = address["complemento"] unless is_nil_or_blank?(address["complemento"])
-    hash["cep"] =                address["cep"]         unless is_nil_or_blank?(address["cep"])
+    hash["cep"]                = address["cep"]         unless is_nil_or_blank?(address["cep"])
     hash
   end
 

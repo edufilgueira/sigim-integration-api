@@ -14,9 +14,10 @@ module BaseController
 
   SOURCE_SYSTEM = :null
   COLLECTION = ""
-  ETL_QUANTITY  = 1000
+  ETL_QUANTITY  = 100
   STATE = :null
   TABLE_IMPORTATION = []
+  TABLE_IMPORTATION_EXCEPTION = [:City, :Neighborhood]
 
 
   def import(url, list)
@@ -90,13 +91,28 @@ module BaseController
     resources = resource.where(hash)
     klass = resources.first
     if resources.count == 1
-      return verify_error_association(model, klass)
+      return to_approve_or_set_error_association(model, klass)
     elsif resources.count > 1
       verify_error_duplicity(resources, model)
     else
       verify_error_create_and_null(model, name)
     end
     return resource.new
+  end
+
+  def new_person(json)
+    pes = SigimImports::Person.new
+    pes.send("#{source_system.to_s}_from_to").each do |k,v|
+      unless k[0,1] == "_"
+        pes.send("#{k}=", json[v].to_s.strip) unless is_nil_or_blank?(json[v])
+      else
+        model = symbolic_attribute_name(k)
+        resource = auxiliary_table_map(model.to_sym, json[v])
+        pes.send("#{k[1..-1]}=", resource.sigim_id)
+        pes.send("old_#{model.underscore}=", resource)
+      end
+    end
+    pes
   end
 
   # Auxiliary Data
@@ -172,23 +188,32 @@ module BaseController
 
   def ignore_data_in_batch(person)
     set_data_ignore(:cpf) if is_nil_or_blank?(person.cpf)
-    set_data_ignore(:name) if auto_ignore_name?(person.name)
+    set_data_ignore(:name, @ignore_name) if auto_ignore_name?(person.name)
     table_importation.each do | model |
       ignore_auxiliary_data(model, person)
     end
   end
 
   def auto_ignore_name?(name)
-    return true if @ignored_names.include?(name)
+    # return true if @ignored_names.include?(name)
+    name_sem_acento = name.nil? ? [] : name.sem_acento.upcase
+    @ignored_names.each do |ignore_name|
+      @ignore_name = ignore_name
+      return true if name_sem_acento.include?(ignore_name.sem_acento.upcase)
+    end
     false
   end
 
   def ignore_auxiliary_data(model, person)
     attribute = model.to_s.underscore+"_id"
+    field = model.to_s.underscore.downcase
+    old_resource = person.send("old_#{field}")
     id = person.send(attribute) if person.has_attribute?(attribute)
     unless id.nil?
       resource = constantize("Integrations", model).find_by(sigim_id: id)
-      set_data_ignore(model) if (!resource.nil? && resource.ignore == true)
+      set_data_ignore(model, old_resource.name) if (!resource.nil? && resource.ignore == true)
+    else
+      set_data_ignore(model, old_resource.name) if (!old_resource.nil? && old_resource.ignore == true)
     end
   end
 
@@ -219,7 +244,7 @@ module BaseController
   def execute_save_etl(data, person)
     ApplicationRecord.transaction do
       if person = SigimImports::Person.find_or_create_by(person.attributes)
-        data = change_people_address(data, person)
+        data = change_people_address(data, person) if @Save_address
         data.import_error     = nil
         data.already_imported = true
         data.save
@@ -264,6 +289,10 @@ module BaseController
 
   def system_occurrence
     Integrations::SystemOccurrence
+  end
+
+  def symbolic_attribute_name(value)
+    value[1..-1].chomp("_id").camelize
   end
   
   #Verifica se é o mesmo id presente na lista
@@ -325,36 +354,46 @@ module BaseController
     set_errors(message_error(:rule, "RG",  I18n.t('base.errors.rg',  rg:  person.rg),  person.rg))  if person.exists_rg?
   end
 
-  def verify_error_association(model, klass)
+  def to_approve_or_set_error_association(model, klass)
     msg = set_msg_no_association(klass)
     msg += ' ('+klass.city.name+')' if model == :Neighborhood
     city_id = klass.has_attribute?(:city_id) ? klass.city.id : nil
-    set_errors(message_error(:association, model, msg, klass.id, city_id)) if auxiliary_empty?(klass)
+    if !table_importation_exception.include?(model)
+      @Save_address = true
+      set_errors(message_error(:association, model, msg, klass.id, city_id)) if auxiliary_empty?(klass)
+    else
+      @Save_address = false
+    end
     klass
   end
 
   def verify_error_duplicity(resources, model)
-    ids = list_ids(resources)
-    names = list_names(resources)
-    msg = set_msg_doubt(names)
-    set_errors(message_error(:duplicity, model, msg, ids))
-  end
-
-  def verify_error_create_and_null(model, name)
-    if !name.nil?
-      msg = set_msg_create(name)
-      set_errors(message_error(:create, model, msg, "null"))
-    else
-      msg = set_msg_null(model)
-      set_errors(message_error(:null, model, msg, "null"))
+    if !table_importation_exception.include?(model)
+      ids = list_ids(resources)
+      names = list_names(resources)
+      msg = set_msg_doubt(names)
+      set_errors(message_error(:duplicity, model, msg, ids))
     end
   end
 
-  def set_data_ignore(type)
-    message =  set_msg_ignore('cpf')     if type == :cpf
-    message =  set_msg_ignore('name')     if type == :name
-    set_msg_ignore(type.to_s.underscore) if table_importation.include?(type)
-    @ignore_error << { reason: message }
+  def verify_error_create_and_null(model, name)
+    if !table_importation_exception.include?(model)
+      if !name.nil?
+        msg = set_msg_create(name)
+        set_errors(message_error(:create, model, msg, "null"))
+      else
+        msg = set_msg_null(model)
+        set_errors(message_error(:null, model, msg, "null"))
+      end
+    end
+  end
+
+  def set_data_ignore(type, value=nil)
+    message = set_msg_ignore('cpf')  if type == :cpf
+    message = set_msg_ignore('name') if type == :name
+    message = set_msg_ignore(type)   if table_importation.include?(type)
+    reason = value.nil? ? { reason: message } : { reason: message, value: value }
+    @ignore_error << reason
   end
 
   def set_error_import_etl(data, errors)
@@ -372,7 +411,7 @@ module BaseController
   end
 
   def set_msg_ignore(key)
-    I18n.t("base.data_ignore.#{key}")
+    I18n.t("base.data_ignore.#{key.to_s.underscore}")
   end
 
   def set_msg_no_association(klass)
@@ -393,8 +432,24 @@ module BaseController
   end
 
   def message_error(error_type, classfy, error, id, klass_id=nil)
-    return { error_type: error_type, classfy: classfy, error: error, id: id } if klass_id.nil?
-    { error_type: error_type, classfy: classfy, error: error, id: id,  klass_id:  klass_id }
+    klass_id_nil = { error_type: error_type,
+                     classfy: classfy,
+                     error: error,
+                     id: id }
+    klass_id_and_address = { error_type: error_type,
+                          classfy: classfy,
+                          error: error,
+                          id: id,
+                          address: @address_nudem }
+    default = { error_type: error_type,
+                classfy: classfy,
+                error: error,
+                id: id, 
+                klass_id:  klass_id }
+    
+    return klass_id_nil         if (klass_id.nil? && @address_nudem.nil?)
+    return klass_id_and_address if (klass_id.nil? && !@address_nudem.nil?)
+    default
   end
 
   def success(last_page, total_pages) 
@@ -441,6 +496,10 @@ module BaseController
 
   def table_importation
     self.class::TABLE_IMPORTATION
+  end
+
+  def table_importation_exception
+    self.class::TABLE_IMPORTATION_EXCEPTION
   end
 
   def etl_quantity 

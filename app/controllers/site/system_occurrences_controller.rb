@@ -6,7 +6,14 @@ class Site::SystemOccurrencesController < ApplicationController
   end 
   
   def ignored
-    @errors_ignoreds = Integrations::SystemOccurrence.errors_ignored.page(params[:page]).per(5)
+    list = Integrations::SystemOccurrence::SOURCE_SYSTEM
+    where =  ""
+    where += "AND source_system = #{list.find_index(params[:source_system].to_sym)} " if !params[:source_system].blank?
+    where += "AND response->>'nome' ilike '%#{params[:nome]}%' "                      if !params[:nome].blank?
+    where += "AND jsonb_pretty(import_error) ILIKE '%#{params[:error_type]}%' "       if !params[:error_type].blank?
+    where += "AND jsonb_pretty(ignore_error) ILIKE '%#{params[:reason]}%' "           if !params[:reason].blank?
+    collection = Integrations::SystemOccurrence.filtered_errors_ignored(where)
+    @errors_ignoreds = Kaminari.paginate_array(collection).page(params[:page]).per(10)
   end
 
   def authorize
@@ -37,7 +44,6 @@ class Site::SystemOccurrencesController < ApplicationController
   def agruped
     @errors_type_associations = Integrations::SystemOccurrence
       .errors_type_associations(params[:source_system])
-    @paginate_agruped = Kaminari.paginate_array(@errors_type_associations).page(params[:page]).per(20)
   end
 
   def neighborhood_by_city

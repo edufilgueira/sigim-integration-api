@@ -12,7 +12,7 @@
               = distinct.count
             %div
               Ajustar inconsistências
-      = link_to agruped_site_system_occurrences_path(name: distinct.source_system, source_system: distinct.source_system.to_i) do
+      = link_to agruped_site_system_occurrences_path(name: distinct.source_system, source_system: distinct.source_system.to_sym) do
         .panel-footer
           %span.pull-left
             = distinct.source_system

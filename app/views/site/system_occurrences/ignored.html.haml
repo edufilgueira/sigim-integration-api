@@ -1,51 +1,85 @@
 -content_for :title, "Ocorrências rejeitadas"
-- @errors_ignoreds.each do |errors_ignored|
-	%table.table.table-striped.table-bordered.table-hover
-		%thead
-			%tr
-				%th{style:"width:50px"}
-					Sistema
-				%th{style:"width:450px"}
-					Nome
-				%th
-					Erros de importação
-				%th
-					Auto ignore
-			
-		%tbody
-			%tr.odd.gradeX
-				%td
-					= errors_ignored.source_system
-				%td
-					= errors_ignored[:response]["nome"] if errors_ignored.source_system == "oisol"
-					= errors_ignored[:response]["nome"] if errors_ignored.source_system == "nudem"
-				%td
-					- if errors_ignored.import_error?
-						- double=[]
-						- errors_ignored.import_error.each do | error |
-							%span.label.label-danger
-								= t("base.errors_type.#{error["error_type"]}") if	!double.include?(error["error_type"])
-								&nbsp;
-							- double.push(error["error_type"])
-			
-				%td
-					- if errors_ignored.ignore_error?
-						- errors_ignored.ignore_error.each do | error |
-							%span.label.label-danger
-								= error["reason"]
-				
-			%tr
-				%td{colspan:9}
-					%table.table
-						- if errors_ignored.import_error?
-							- errors_ignored.import_error.each do | error |
-								- if error["error_type"] != "association"
-									%tr
-										%td
-											= t("base.errors_type.#{error["error_type"]}")
-											= t("activerecord.models.#{error["classfy"].underscore}")
-									%td
-										= error["error"]
+
+= form_with url: ignored_site_system_occurrences_path, method: :get do |form|
+  .row
+    .col-xs-3
+      = form.label "Sistema:"
+      = form.collection_select :source_system, Integrations::SourceSystem.all, :source_system, :name, {prompt: 'Selecione', selected: params[:source_system]}, class: "form-control"
+    .col-xs-3
+      = form.label "Nome:"
+      = form.text_field :nome, value: params[:nome], class: "form-control"
+    .col-xs-3
+      = form.label " Erros de importação:"
+      = form.text_field :error_type, value: params[:error_type], class: "form-control"
+    .col-xs-3
+      = form.label " Erros de auto ignore:"
+      = form.text_field :reason,  value: params[:reason], class: "form-control"
+  %br
+  = form.submit "Filtrar", class: 'btn btn-primary' 
+  = link_to "Limpar", ignored_site_system_occurrences_path, class: 'btn btn-primary'
+
+%br
+%table.table.table-striped.table-bordered.table-hover
+  %thead
+    %tr
+      %th{style:"width:50px"}
+        Sistema
+      %th{style:"width:40px"}
+        ID
+      %th{style:"width:550px"}
+        Nome
+      %th
+        Erros de importação
+      %th{style:"width:380px"}
+        Erros de auto ignore
+  %tbody
+  - @errors_ignoreds.each do |errors_ignored|
+
+    %tr.odd.gradeX
+      %td
+        = errors_ignored.source_system
+      %td
+        = errors_ignored.id
+      %td
+        = errors_ignored[:response]["nome"] if errors_ignored.source_system == "oisol"
+        = errors_ignored[:response]["nome"] if errors_ignored.source_system == "nudem"
+      %td
+        - if errors_ignored.import_error?
+          - double=[]
+          - errors_ignored.import_error.each do | error |
+            %span.label.label-danger
+              = t("base.errors_type.#{error["error_type"]}") if	!double.include?(error["error_type"])
+              &nbsp;
+            - double.push(error["error_type"])
+    
+      %td
+        - if errors_ignored.ignore_error?
+          - errors_ignored.ignore_error.each do | error |
+            %span.label.label-danger
+              Motivo: 
+              = error["reason"]
+              - if error["value"]
+                Valor: 
+                = error["value"]
+
+            &nbsp;
+              
+    %tr
+      %td{colspan:5}
+        %table.table
+          - if errors_ignored.import_error?
+            - errors_ignored.import_error.each do | error |
+              - if error["error_type"] != "association"
+                %tr
+                  %td
+                    = t("base.errors_type.#{error["error_type"]}")
+                    = t("activerecord.models.#{error["classfy"].underscore}")
+                %td
+                  = error["error"]
+
+.text-left
+  Total de Ocorrências rejeitadas: 
+  = Integrations::SystemOccurrence.errors_ignored.count
 
 .text-center
-	= paginate @errors_ignoreds
+  = paginate @errors_ignoreds

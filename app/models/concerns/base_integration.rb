@@ -6,7 +6,8 @@ module BaseIntegration
     enum source_system: Integrations::SystemOccurrence::SOURCE_SYSTEM
 
     def self.new_data(source_system, name)
-      find_or_create_by(source_system: source_system, name: name)
+      name = name.strip unless name.nil?
+      find_or_create_by(source_system: source_system, name: name) if (!name.nil? || !name.blank?) 
     end
 
     # Scope

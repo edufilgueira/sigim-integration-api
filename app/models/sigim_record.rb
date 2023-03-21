@@ -6,4 +6,5 @@ class SigimRecord < ApplicationRecord
   require 'fonetica'
   require 'plural_br'
   require 'singular_br'
+  require 'sem_acento'
 end

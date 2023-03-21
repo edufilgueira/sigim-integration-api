@@ -65,42 +65,39 @@ class Api::NudemController < ApplicationController
   # Importation
 
   def new_person(json)
-    pes = SigimImports::Person.new
-    pes.cpf            = json["cpf"].strip unless json["cpf"].nil?
-    pes.name           = json["nome"].strip unless json["nome"].nil?
-    pes.birth_date     = json["data_nascimento"].strip unless json["data_nascimento"].nil?
-    pes.average_income = json["renda_mensal"] unless json["renda_mensal"].nil?
-    pes.number_children= json["quant_filhos"] unless json["quant_filhos"].nil?
-    pes.breed_id              = auxiliary_table_map(:Breed, json["raca"]).sigim_id
-    pes.scholarity_id         = auxiliary_table_map(:Scholarity, json["escolaridade"]).sigim_id
-    pes.gender_id = 2         # Sempre Feminino
-    pes.sexual_orientation_id = auxiliary_table_map(:SexualOrientation, json["orientacao_sexual"]).sigim_id
-    pes.gender_identity_id    = auxiliary_table_map(:GenderIdentity, json["identidade_genero"]).sigim_id
-    pes.civil_status_id       = auxiliary_table_map(:CivilStatus, json["estado_civil"]).sigim_id
-    pes.housing_situation_id  = auxiliary_table_map(:HousingSituation, json["reside_com"]).sigim_id
+    pes = super
+    pes.gender_id = 2 # Sempre Feminino
+    
     # Provoca erros na cidade e bairro, caso exista
-    city             = auxiliary_table_map(:City, search_city_in_address(json["endereco"]))
-    @neighborhood_id = auxiliary_table_map(:Neighborhood, json["bairro"], :city_id, city.id).sigim_id if !city.sigim_id.nil?
-
+    names_cities = search_city_in_address(json["endereco"])
+    city = auxiliary_table_map(:City, names_cities)
+    # Variável @address_nudem foi criada para atender anomalia do endereço do NUDEM que vem escrito nastring
+    @address_nudem = names_cities.nil? ? nil : json["endereco"]
+    pes.send("old_city=", city) unless city.nil?
+    if !city.sigim_id.nil?
+      neighborhood = auxiliary_table_map(:Neighborhood, json["bairro"], :city_id, city.id)
+      @neighborhood_id = neighborhood&.sigim_id
+      pes.send("old_neighborhood=", neighborhood) unless neighborhood.nil?
+    end
     pes
   end
 
   def search_city_in_address(string)
-    cities = SigimImports::City.array_of_names(state_id)
-    regex = /\b#{ Regexp.union(cities) }\b/i
-    names = string.scan(regex)
-    return nil         if names.count == 0
-    return names.first if names.count == 1
-    names
+    unless  string.nil?
+      cities = SigimImports::City.array_of_names(state_id)
+      regex = /\b#{ Regexp.union(cities) }\b/i
+      names = string.scan(regex)
+      return nil         if names.count == 0
+      return names.first if names.count == 1
+      return names
+    end
+    nil
   end
 
   def change_fields_people_address(json)
     address = json["endereco"]
     hash = {}
-    hash["street_name"] =        address  unless is_nil_or_blank?(address)
-    # hash["street_number"] =      address["numero"]      unless is_nil_or_blank?(address["numero"])
-    # hash["address_complement"] = address["complemento"] unless is_nil_or_blank?(address["complemento"])
-    # hash["cep"] =                address["cep"]         unless is_nil_or_blank?(address["cep"])
+    hash["street_name"] = address  unless is_nil_or_blank?(address)
     hash
   end
 
@@ -110,7 +107,7 @@ class Api::NudemController < ApplicationController
     Integrations::SexualOrientation.new_data(source_system, json["orientacao_sexual"])
     Integrations::GenderIdentity.new_data(source_system, json["identidade_genero"]) 
     Integrations::CivilStatus.new_data(source_system, json["estado_civil"])
-    Integrations::HousingSituation.new_data(source_system, json["reside_com"])
+    Integrations::HousingSituation.new_data(source_system, json["situacao_moradia"])
 
     state = Integrations::State.new_data(source_system, "Ceará")
     city_name = search_city_in_address(json["endereco"])
